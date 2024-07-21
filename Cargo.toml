@@ -1,0 +1,16 @@
+[workspace]
+resolver = "2"
+members = ["lib", "macroquad_utils"]
+
+[package]
+name = "color_swap"
+authors = ["epimoni <45078821+DaveeGaming@users.noreply.github.com>"]
+version = "0.1.0"
+edition = "2021"
+
+[dependencies]
+lib = { path = "./lib" }
+macroquad_utils = { path = "./macroquad_utils" }
+hot-lib-reloader = "0.7.0"
+macroquad = {version="0.4.10", features=["audio"] }
+quad-storage = "0.1.3"
