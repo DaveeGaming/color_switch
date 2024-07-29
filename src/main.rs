@@ -23,6 +23,7 @@ mod collision;
 mod player;
 mod collection;
 mod hp;
+mod particle;
 mod bullet;
 mod colors;
 mod characters;

@@ -150,7 +150,7 @@ impl Game {
                     dest_size: Some(Vec2 { x: 80.0, y: 80.0 }),
                     ..Default::default()
                 }
-            )
+            );
         }
     }
 }

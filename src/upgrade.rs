@@ -1,6 +1,6 @@
 
 use macroquad::prelude::*;
-use crate::{assets::Assets, colors::ColorState, game::*, hot_lib, wave::WaveState};
+use crate::{assets::Assets, colors::ColorState, game::*, hot_lib, wave::{Wave, WaveState}};
 
 
 pub struct Upgrade {
@@ -70,25 +70,47 @@ impl Game {
             }
         }
 
-        // draw_rectangle(50.0, 415.0, 300.0, 70.0, WHITE);  // Reroll
-        let reroll_rect = hot_lib::get_reroll_rect();
-        if rect_collide(self.player.get_rect(), reroll_rect) {
-            self.upgrade_shown = 1001;
-            if self.player.reroll > 0 && is_key_pressed(KeyCode::Space) {
-                self.upgrades = Vec::new();
-                self.spawn_upgrades();
-                self.player.reroll -= 1;
+
+        if self.upgrade_shown < 1000 && is_key_pressed(KeyCode::Space) {
+            // Picked the current upgrade
+            self.wave.state = WaveState::Spawning;
+            self.wave.upgrades_spawned = false;
+            self.wave.upgrade_picked = true;
+            let upg = &self.upg_list[self.upgrade_shown];
+            match upg.kind {
+                UpgradeKind::Projectile => {
+
+                }
+                UpgradeKind::SlowDamage => {
+
+                }
+                UpgradeKind::Speed => {
+
+                }
             }
         }
 
-        // draw_rectangle(50.0, 565.0, 450.0, 70.0, WHITE);  // Skip
-        let skip_rect = hot_lib::get_skip_rect();
-        if rect_collide(self.player.get_rect(), skip_rect) {
-            self.upgrade_shown = 1002;
-            if is_key_pressed(KeyCode::Space) {
-                self.wave.state = WaveState::Spawning;
-                self.wave.upgrades_spawned = false;
-                self.wave.upgrade_picked = true;
+        if self.wave.state == WaveState::Start && self.wave.current > 0 {
+            // draw_rectangle(50.0, 415.0, 300.0, 70.0, WHITE);  // Reroll
+            let reroll_rect = hot_lib::get_reroll_rect();
+            if rect_collide(self.player.get_rect(), reroll_rect) {
+                self.upgrade_shown = 1001;
+                if self.player.reroll > 0 && is_key_pressed(KeyCode::Space) {
+                    self.upgrades = Vec::new();
+                    self.spawn_upgrades();
+                    self.player.reroll -= 1;
+                }
+            }
+    
+            // draw_rectangle(50.0, 565.0, 450.0, 70.0, WHITE);  // Skip
+            let skip_rect = hot_lib::get_skip_rect();
+            if rect_collide(self.player.get_rect(), skip_rect) {
+                self.upgrade_shown = 1002;
+                if is_key_pressed(KeyCode::Space) {
+                    self.wave.state = WaveState::Spawning;
+                    self.wave.upgrades_spawned = false;
+                    self.wave.upgrade_picked = true;
+                }
             }
         }
     }
@@ -122,19 +144,21 @@ impl Game {
                 6.0, &self.assets.font_monogram);
         }
 
-        let reroll_color = if self.upgrade_shown == 1001 { WHITE } else { Color { a: 0.2, ..WHITE } };
-        let reroll = format!("{} remaining", self.player.reroll);
-        let reroll_rect = hot_lib::get_reroll_rect();
-        draw_texture(&self.assets.t.reroll, reroll_rect.x, reroll_rect.y + 5.0, reroll_color);
-        draw_text_ex("reroll", reroll_rect.x + 70.0, reroll_rect.y, TextParams { font_size: 10, color: reroll_color, font: Some(&self.assets.font_monogram), ..Default::default()});
-        draw_text_ex(&reroll, reroll_rect.x + 70.0, reroll_rect.y + 35.0, TextParams { font_size: 10, color: reroll_color, font: Some(&self.assets.font_monogram), ..Default::default()});
-
-
-        let skip_rect = hot_lib::get_skip_rect();
-        let skip_color = if self.upgrade_shown == 1002 { WHITE } else { Color { a: 0.2, ..WHITE } };
-        draw_texture(&self.assets.t.skip, skip_rect.x, skip_rect.y + 5.0, skip_color);
-        draw_text_ex("skip for", skip_rect.x + 70.0, skip_rect.y, TextParams { font_size: 10, color: skip_color, font: Some(&self.assets.font_monogram), ..Default::default()});
-        draw_text_ex("30% heal & +1 maxhp", skip_rect.x + 70.0, skip_rect.y + 35.0, TextParams { font_size: 10, color: skip_color, font: Some(&self.assets.font_monogram), ..Default::default()});
+        if self.wave.state == WaveState::Start && self.wave.current > 0 {
+            let reroll_color = if self.upgrade_shown == 1001 { WHITE } else { Color { a: 0.2, ..WHITE } };
+            let reroll = format!("{} remaining", self.player.reroll);
+            let reroll_rect = hot_lib::get_reroll_rect();
+            draw_texture(&self.assets.t.reroll, reroll_rect.x, reroll_rect.y + 5.0, reroll_color);
+            draw_text_ex("reroll", reroll_rect.x + 70.0, reroll_rect.y, TextParams { font_size: 10, color: reroll_color, font: Some(&self.assets.font_monogram), ..Default::default()});
+            draw_text_ex(&reroll, reroll_rect.x + 70.0, reroll_rect.y + 35.0, TextParams { font_size: 10, color: reroll_color, font: Some(&self.assets.font_monogram), ..Default::default()});
+    
+    
+            let skip_rect = hot_lib::get_skip_rect();
+            let skip_color = if self.upgrade_shown == 1002 { WHITE } else { Color { a: 0.2, ..WHITE } };
+            draw_texture(&self.assets.t.skip, skip_rect.x, skip_rect.y + 5.0, skip_color);
+            draw_text_ex("skip for", skip_rect.x + 70.0, skip_rect.y, TextParams { font_size: 10, color: skip_color, font: Some(&self.assets.font_monogram), ..Default::default()});
+            draw_text_ex("30% heal & +1 maxhp", skip_rect.x + 70.0, skip_rect.y + 35.0, TextParams { font_size: 10, color: skip_color, font: Some(&self.assets.font_monogram), ..Default::default()});
+        }
 
         if self.upgrade_shown < 1000 {
             let upg = &self.upg_list[self.upgrade_shown];
@@ -188,6 +212,7 @@ impl Game {
                 draw_text_centered(&string, x_start + width / 2.0, padding + height/2.0  + (idx * 40.0) - size, 10.0, &self.assets.font_monogram);
                 idx += 1.0;
             }
+
         }
     }
 
@@ -239,7 +264,6 @@ impl Game {
                 }
             )
         }
-        self.move_player();
         self.wave.upgrades_spawned = true;
     }
 }

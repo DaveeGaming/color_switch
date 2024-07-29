@@ -29,7 +29,7 @@ pub struct Wave {
 impl Wave {
     pub fn default() -> Self {
         Wave { 
-            current: 1, 
+            current: 0, 
             state: WaveState::Start, 
             enemy_remaining: 0, 
             enemies_set: false,

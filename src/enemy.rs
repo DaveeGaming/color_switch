@@ -15,6 +15,7 @@ pub struct Enemy {
     pub health: f32,
     pub x: f32,
     pub y: f32,
+    pub rot: f32,
     pub size: f32,
     pub score: i32,
     pub state: ColorState,
@@ -31,7 +32,8 @@ impl Default for Enemy {
             health: 10.0,
             x: 50.0,
             y: 50.0,
-            size: 40.0,
+            rot: 0.0,
+            size: 60.0,
             score: 10,
             can_collide: false,
             state: ColorState::Primary,
@@ -70,7 +72,11 @@ impl Game {
             ColorState::Secondary => self.palette.fg_secondary,
         };
 
-        draw_rectangle(e.x, e.y, e.size, e.size, color); 
+        let e_pos = Vec2 { x: e.x, y: e.y};
+        let p_pos = Vec2 { x: self.player.x, y: self.player.y};
+        e.rot = (p_pos - e_pos).to_angle();
+
+        draw_texture_sized(&self.assets.t.tower, e.x, e.y, color, e.size, e.rot);
     }
 
     pub fn update_follow_shoot_enemy(&mut self, e: &mut Enemy) {
@@ -95,10 +101,14 @@ impl Game {
 
             }
         } 
+
+        let e_pos = Vec2 { x: e.x, y: e.y};
+        let p_pos = Vec2 { x: self.player.x, y: self.player.y};
+        e.rot = (p_pos - e_pos).to_angle();
     }
 
     pub fn draw_follow_shoot_enemy(&mut self,e: &mut Enemy) {
-        draw_texture(&self.assets.t.shooter, e.x, e.y, WHITE);
+        draw_texture_sized(&self.assets.t.shooter, e.x, e.y, WHITE, e.size, e.rot);
         // draw_rectangle(e.x, e.y, e.size, e.size, WHITE); 
     }
 
@@ -121,7 +131,8 @@ impl Game {
     }
 
     pub fn draw_static_circle_enemy(&mut self,e: &mut Enemy) {
-        draw_texture(&self.assets.t.tower, e.x, e.y, WHITE);
+        let size = 10.0 + (e.attack_t / e.attack_speed * (e.size - 10.0));
+        draw_texture_sized(&self.assets.t.tower, e.x - size/2.0 + e.size/2.0, e.y - size/2.0 + e.size/2.0, WHITE, size, e.rot);
         // draw_rectangle(e.x, e.y, e.size, e.size, YELLOW); 
     }
 }

@@ -3,9 +3,11 @@ use std::{cmp::min, sync::MutexGuard};
 use macroquad::prelude::*;
 use macroquad::audio::*;
 use quad_storage::LocalStorage;
+use rand::gen_range;
 
 use crate::characters::Character;
 use crate::characters::CharacterKind;
+use crate::particle::Particle;
 use crate::upgrade::*;
 use crate::{assets::Assets, bullet::*, colors::ColorPalette, enemy::*};
 use crate::player::*;
@@ -85,6 +87,7 @@ pub struct Game {
     pub enemies: Vec<Enemy>, // Box is for allocating to the heap
     pub characters: Vec<Character>,
     pub bullets: Vec<Bullet>,
+    pub particles: Vec<Particle>,
     pub circle_attacks: Vec<CircleAttack>,
     pub upgrades: Vec<UpgradeEntity>, 
     pub player: Player,
@@ -120,6 +123,7 @@ impl Game {
             debug: DebugStuff::default(),
             player: Player::default(),
             enemies: Vec::new(),
+            particles: Vec::new(),
             enemy_spawn: Vec::new(),
             collection_x: 0,
             shooting_sound: true,
@@ -275,11 +279,11 @@ pub struct SpawnEnemy {
     pub x: f32,
     pub y: f32,
     pub spawn_t: f32,
-    pub to_spawn: Enemy,
 }
 
 impl Game {
     pub fn update(&mut self) {
+        self.particle_update();
         match self.game_state {
             GameState::MainMenu => self.menu_update(),
             GameState::Playing => self.game_update(),
@@ -291,6 +295,7 @@ impl Game {
     }
 
     pub fn draw(&mut self) {
+        self.particle_draw();
         match self.game_state {
             GameState::MainMenu => self.menu_draw(),
             GameState::Playing => self.game_draw(),
@@ -325,11 +330,25 @@ impl Game {
 
     pub fn update_spawning(&mut self, s: &mut SpawnEnemy) {
         s.spawn_t -= get_frame_time();
+
         if s.spawn_t <= 0.0 {
-            let mut enemy = s.to_spawn;
-            enemy.x = s.x;
-            enemy.y = s.y;
-            self.enemies.push(enemy);
+            //TODO: Randomly spawn here
+
+            let to_spawn = min(5, self.wave.enemy_remaining);
+
+            for _ in 0..to_spawn {
+                let x = rand::gen_range(0.0, 300.0);
+                let y = rand::gen_range(0.0, 300.0);
+                let kind = rand::gen_range(0, self.enemy_list.len() - 1);
+
+                
+                let mut enemy = self.enemy_list[kind].clone();
+                enemy.x = x + s.x;
+                enemy.y = y + s.y;
+                self.enemies.push( enemy );
+
+                self.wave.enemy_remaining -= 1;
+            }
         }
     }
 
@@ -339,18 +358,19 @@ impl Game {
             ColorState::Secondary => self.palette.fg_secondary
         };
 
-        color.a = 0.8;
-
-        let spawn_size = 30.0;
         let spawn_time = 2.0;
+        let third = spawn_time / 3.0;
+        color.a = 0.5;
 
-        draw_rectangle_lines(s.x, s.y, spawn_size, spawn_size, 6.0, color);
-
-        let curr_size = spawn_size * ((spawn_time - s.spawn_t) / spawn_time);
-        draw_rectangle(
-            s.x + spawn_size/2.0 - curr_size/2.0, 
-            s.y + spawn_size/2.0 - curr_size/2.0, 
-            curr_size, curr_size, color)
+        if s.spawn_t > 1.5 {
+            draw_texture(&self.assets.t.enemy_spawn1, s.x, s.y, color);
+        } else if s.spawn_t > 1.0 {
+            draw_texture(&self.assets.t.enemy_spawn2, s.x, s.y, color);
+        } else if s.spawn_t > 0.5 {
+            draw_texture(&self.assets.t.enemy_spawn3, s.x, s.y, color);
+        } else {
+            draw_texture(&self.assets.t.enemy_spawn4, s.x, s.y, color);
+        }
 
     }
 
@@ -511,7 +531,7 @@ impl Game {
             self.palette = self.palettes[ rand::gen_range(0, self.palettes.len()) ]
         }
 
-        if self.wave.state != WaveState::Start && is_key_pressed(KeyCode::Space){
+        if !(self.wave.state == WaveState::Start && self.wave.current > 0) && is_key_pressed(KeyCode::Space){
             if self.wave.current == 0 {
                 self.switch_effect_total = 0.3;
             }
@@ -540,6 +560,7 @@ impl Game {
                 if self.wave.current != 0 && !self.wave.start_spawned {
                     if !self.wave.upgrades_spawned {
                         self.spawn_upgrades();
+                        self.move_player();
                     }
                 }
 
@@ -569,25 +590,16 @@ impl Game {
 
                 if self.wave.spawn_delay_t <= 0.0 {
                     if self.wave.enemies_set && self.wave.enemy_remaining > 0 {
-                        let to_spawn = min(5, self.wave.enemy_remaining);
-
-
                         let rad_x = rand::gen_range(50.0, DESIGN_WIDTH - 400.0);
                         let rad_y = rand::gen_range(50.0,  DESIGN_HEIGHT - 350.0);
-
-                        for _ in 0..to_spawn {
-                            let x = rand::gen_range(0.0, 300.0);
-                            let y = rand::gen_range(0.0, 300.0);
-                            self.enemy_spawn.push(
-                                SpawnEnemy {
-                                    x: rad_x + x, y: rad_y + y,
-                                    spawn_t: 2.0,
-                                    to_spawn: self.enemy_list[ rand::gen_range(0, self.enemy_list.len())],
-                                }
-                            );
-        
-                            self.wave.enemy_remaining -= 1;
-                        }
+                        
+                        self.enemy_spawn.push(
+                            SpawnEnemy {
+                                x: rad_x, y: rad_y,
+                                spawn_t: 2.0,
+                            }
+                        );
+                        
                         self.wave.spawn_delay_t = self.wave.spawn_delay_tmax;
                     }
                 }
@@ -629,7 +641,7 @@ impl Game {
         clear_background(bg_color);
 
         if self.wave.current == 0 {
-            draw_texture(&self.assets.t.controls, 0.0, 0.0, color);
+            draw_texture(&self.assets.t.controls_finish, 0.0, 0.0, color);
         }
 
         // draw switch effect before everything else
@@ -738,4 +750,8 @@ pub fn rect_collide(r1: Rect, r2: Rect) -> bool {
 
 pub fn increment_or_zero(num: i32, max: i32) -> i32 {
     if num + 1 > max { 0 } else { num + 1}
+}
+
+pub fn draw_texture_sized(texture: &Texture2D, x: f32, y: f32, color: Color, size: f32, rot: f32) {
+    draw_texture_ex(texture, x, y, color, DrawTextureParams { dest_size: Some( Vec2 { x: size, y: size}), rotation: rot, ..Default::default()});
 }
