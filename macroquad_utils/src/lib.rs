@@ -14,7 +14,7 @@ pub fn derive_texture_dyn_loader(item: TokenStream) -> TokenStream {
 
             for field in &st.fields {
                 let name = field.ident.as_ref().unwrap();
-                let path = format!("D:/Stuff/Coding/Rust/color_swap/assets/{}.png", name);
+                let path = format!("./assets/{}.png", name);
                 struct_inside.extend(quote! {
                     #name: macroquad::texture::load_texture(#path).await.unwrap(),
                 })
@@ -48,7 +48,7 @@ pub fn derive_texture_static_loader(item: TokenStream) -> TokenStream {
 
             for field in &st.fields {
                 let name = field.ident.as_ref().unwrap();
-                let path = format!("D:/Stuff/Coding/Rust/color_swap/assets/{}.png", name);
+                let path = format!("./assets/{}.png", name);
                 struct_inside.extend(quote! {
                     #name: macroquad::texture::Texture2D::from_file_with_format( include_bytes!(path), None),
                 })
