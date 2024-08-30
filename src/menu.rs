@@ -129,6 +129,7 @@ impl Game {
         clear_background(BLACK);
         let x_center = DESIGN_WIDTH/2.0;
         self.background_draw();
+        self.particle_draw();
         draw_texture(&self.assets.t.menu1, x_center - 80.0, 100.0, self.palette.fg_primary);
         draw_texture(&self.assets.t.menu2, x_center - 80.0, 100.0, self.palette.fg_secondary);
         draw_text_centered(" COLOR  SWITCH ", x_center, 120.0, 30.0, &self.assets.font_monogram);

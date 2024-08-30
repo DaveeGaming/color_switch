@@ -1,6 +1,6 @@
 
 use macroquad::prelude::*;
-use crate::{assets::Assets, colors::ColorState, game::*, hot_lib, wave::{Wave, WaveState}};
+use crate::{assets::Assets, colors::ColorState, game::*, wave::WaveState};
 
 
 pub struct Upgrade {
@@ -53,6 +53,14 @@ impl UpgradeEntity {
     }
 }
 
+pub fn get_skip_rect() -> Rect {
+    Rect { x: 250.0, y: 750.0, w: 450.0, h: 70.0}
+}
+
+pub fn get_reroll_rect() -> Rect {
+    Rect { x: 1000.0, y: 750.0, w: 450.0, h: 70.0}
+}
+
 impl Game {
     pub fn update_upgrades(&mut self) {
         self.upgrade_shown = 1000;
@@ -92,18 +100,18 @@ impl Game {
 
         if self.wave.state == WaveState::Start && self.wave.current > 0 {
             // draw_rectangle(50.0, 415.0, 300.0, 70.0, WHITE);  // Reroll
-            let reroll_rect = hot_lib::get_reroll_rect();
+            let reroll_rect = get_reroll_rect();
             if rect_collide(self.player.get_rect(), reroll_rect) {
                 self.upgrade_shown = 1001;
-                if self.player.reroll > 0 && is_key_pressed(KeyCode::Space) {
+                if self.player.stats.rerolls > 0 && is_key_pressed(KeyCode::Space) {
                     self.upgrades = Vec::new();
                     self.spawn_upgrades();
-                    self.player.reroll -= 1;
+                    self.player.stats.rerolls -= 1;
                 }
             }
     
             // draw_rectangle(50.0, 565.0, 450.0, 70.0, WHITE);  // Skip
-            let skip_rect = hot_lib::get_skip_rect();
+            let skip_rect = get_skip_rect();
             if rect_collide(self.player.get_rect(), skip_rect) {
                 self.upgrade_shown = 1002;
                 if is_key_pressed(KeyCode::Space) {
@@ -146,14 +154,14 @@ impl Game {
 
         if self.wave.state == WaveState::Start && self.wave.current > 0 {
             let reroll_color = if self.upgrade_shown == 1001 { WHITE } else { Color { a: 0.2, ..WHITE } };
-            let reroll = format!("{} remaining", self.player.reroll);
-            let reroll_rect = hot_lib::get_reroll_rect();
+            let reroll = format!("{} remaining", self.player.stats.rerolls);
+            let reroll_rect = get_reroll_rect();
             draw_texture(&self.assets.t.reroll, reroll_rect.x, reroll_rect.y + 5.0, reroll_color);
             draw_text_ex("reroll", reroll_rect.x + 70.0, reroll_rect.y, TextParams { font_size: 10, color: reroll_color, font: Some(&self.assets.font_monogram), ..Default::default()});
             draw_text_ex(&reroll, reroll_rect.x + 70.0, reroll_rect.y + 35.0, TextParams { font_size: 10, color: reroll_color, font: Some(&self.assets.font_monogram), ..Default::default()});
     
     
-            let skip_rect = hot_lib::get_skip_rect();
+            let skip_rect = get_skip_rect();
             let skip_color = if self.upgrade_shown == 1002 { WHITE } else { Color { a: 0.2, ..WHITE } };
             draw_texture(&self.assets.t.skip, skip_rect.x, skip_rect.y + 5.0, skip_color);
             draw_text_ex("skip for", skip_rect.x + 70.0, skip_rect.y, TextParams { font_size: 10, color: skip_color, font: Some(&self.assets.font_monogram), ..Default::default()});

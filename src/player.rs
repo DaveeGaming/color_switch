@@ -4,58 +4,64 @@ use crate::game::*;
 use crate::bullet::*;
 use crate::colors::*;
 
-pub struct Player {
+pub struct PlayerStats {
     pub max_health: i32,
-    pub health: i32,
+    pub current_health: i32,
+    pub rerolls: i32,
+    pub spread: f32,
+    pub projectiles: i32,
+    pub attack_speed: f32,
+    pub movement_speed: i32,
+    pub bullet_size: i32,
+    pub bullet_damage: i32,
+    pub bullet_speed: i32, // * 50
+    pub heal_from_bullets: i32,
+}
+
+impl Default for PlayerStats {
+    fn default() -> Self {
+        Self {
+            max_health: 10,
+            current_health: 10,
+            spread: 3.0,
+            movement_speed: 5, // * 50
+            projectiles: 1,
+            bullet_damage: 1,
+            bullet_size: 6,
+            bullet_speed: 10, // * 50
+            rerolls: 3,
+            attack_speed: 1.0, // 1 / x
+            heal_from_bullets: 1,
+        }
+    }
+}
+
+pub struct Player {
+    pub stats: PlayerStats,
     pub rotation: f32,
     pub size: f32,
     pub x: f32,
     pub y: f32,
     pub dx: f32,
     pub dy: f32,
-    pub reroll: i32,
-    pub spread: f32,
-    pub projectiles: f32,
-    pub attack_speed: f32,
-    pub move_speed: f32,
-    pub bullet_size: f32,
-    pub bullet_speed: f32,
-    pub damage: f32,
     pub shoot_dx: f32,
     pub shoot_dy: f32,
     pub shoot_t: f32,
-    pub melee_t: f32,
-    pub melee_range: f32,
-
-    pub heal_from_b: i32,
 }
 
 impl Default for Player {
     fn default() -> Player {
         Player {
-            max_health: 10,
-            health: 10,
+            stats: PlayerStats::default(),
             rotation: 0.0,
             size: 40.0,
-            damage: 1.0,
-            spread: 3.0,
-            move_speed: 300.0,
-            projectiles: 1.0,
-            bullet_size: 6.0,
-            bullet_speed: 550.0,
             x: DESIGN_WIDTH/2.0,
-            reroll: 3,
             y: 700.0,
             dx: 0.0,
             dy: 0.0,
             shoot_dx: 1.0,
             shoot_dy: 0.0,
-            attack_speed: 0.1,
             shoot_t: 0.0,
-            melee_t: 0.0,
-            melee_range: 80.0,
-
-            heal_from_b: 1,
         }
     }
 }
@@ -74,10 +80,7 @@ impl Player {
 impl Game {
 
     pub fn player_draw(&self) {
-        let color = match self.color_state {
-            ColorState::Primary => self.palette.fg_primary,
-            ColorState::Secondary => self.palette.fg_secondary
-        };
+        let color = self.get_primary_color();
 
         let center_x = self.player.x + self.player.size/2.0;
         let center_y = self.player.y + self.player.size/2.0;
@@ -86,9 +89,9 @@ impl Game {
         melee_color.a = 0.5;
 
 
-        if self.player.melee_t > 1.5 && self.player.melee_t < 2.0 {
-            draw_circle(center_x, center_y, self.player.melee_range, melee_color);
-        }
+        // if self.player.melee_t > 1.5 && self.player.melee_t < 2.0 {
+        //     draw_circle(center_x, center_y, self.player.melee_range, melee_color);
+        // }
 
         // draw_rectangle_ex(self.player.x, self.player.y, self.player.size, self.player.size,
         //     DrawRectangleParams {
@@ -157,8 +160,8 @@ impl Game {
         self.player.shoot_dx = shoot_dir.x;
         self.player.shoot_dy = shoot_dir.y;
 
-        self.player.dx = dir.x * self.player.move_speed;
-        self.player.dy = dir.y * self.player.move_speed;
+        self.player.dx = dir.x * (self.player.stats.movement_speed * 50) as f32;
+        self.player.dy = dir.y * (self.player.stats.movement_speed * 50) as f32;
 
         if self.player.shoot_t > 0.0 {
             self.player.shoot_t -= dt;
@@ -172,9 +175,9 @@ impl Game {
                 let deg_projectile = 2.0;
                 let offset = deg_projectile/2.0;
 
-                for i in 0..self.player.projectiles as i32 {
+                for i in 0..self.player.stats.projectiles as i32 {
                     
-                    let actual_spread = rand::gen_range(-self.player.spread, self.player.spread);
+                    let actual_spread = rand::gen_range(-self.player.stats.spread, self.player.stats.spread);
                     let  dir = rotate_vec(Vec2 { x: self.player.shoot_dx, y: self.player.shoot_dy}, actual_spread);
                     let mut dir = rotate_vec(dir, -offset + i as f32*deg_projectile);
                     dir = dir.normalize_or_zero();
@@ -185,26 +188,26 @@ impl Game {
                         self.player.y + 15.0, // y
                         dir.x, // dx
                         dir.y, // dy
-                        self.player.bullet_size,
-                        self.player.bullet_speed,
+                        self.player.stats.bullet_size as f32,
+                        (self.player.stats.bullet_speed * 50) as f32,
                         BulletType::Player, // kind
                     ));
                 }
 
 
 
-                self.player.shoot_t += self.player.attack_speed;
+                self.player.shoot_t += self.player.stats.attack_speed;
             }
 
         }
 
-        if self.player.melee_t < 0.0 && (is_key_down(KeyCode::K) || is_key_down(KeyCode::G)) && false {
-            self.player.melee_t = 2.0;
-        }
+        // if self.player.melee_t < 0.0 && (is_key_down(KeyCode::K) || is_key_down(KeyCode::G)) && false {
+        //     self.player.melee_t = 2.0;
+        // }
 
-        if self.player.melee_t >= 0.0 {
-            self.player.melee_t -= get_frame_time();
-        }
+        // if self.player.melee_t >= 0.0 {
+        //     self.player.melee_t -= get_frame_time();
+        // }
 
         self.player.x += self.player.dx * dt;
         self.player.y += self.player.dy * dt;

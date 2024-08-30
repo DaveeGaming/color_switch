@@ -12,7 +12,7 @@ pub enum EnemyType {
 
 #[derive(Clone, Copy)]
 pub struct Enemy {
-    pub health: f32,
+    pub health: i32,
     pub x: f32,
     pub y: f32,
     pub rot: f32,
@@ -29,7 +29,7 @@ pub struct Enemy {
 impl Default for Enemy {
     fn default() -> Self {
         Self {
-            health: 10.0,
+            health: 10,
             x: 50.0,
             y: 50.0,
             rot: 0.0,

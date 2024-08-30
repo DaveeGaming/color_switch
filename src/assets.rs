@@ -1,6 +1,8 @@
 use macroquad::{audio::{load_sound_from_bytes, Sound}, logging::error, text::{load_ttf_font_from_bytes, Font}, texture::Texture2D};
 use macroquad_utils::*;
 
+use crate::log;
+
 pub struct Assets {
     pub font_monogram: Font,
     pub t: Textures,
@@ -12,7 +14,7 @@ pub struct Assets {
     pub dead: Sound,
 }
 
-#[derive(TextureDynLoader)]
+#[derive(TextureStaticLoader)]
 pub struct Textures {
     pub upgrade_frame: Texture2D,
     pub maxhp: Texture2D,
@@ -55,15 +57,23 @@ impl Assets {
             error!("Unable to load monogram font!")
         }
 
-        return Assets {
-            font_monogram: font.unwrap(),
-            t: Textures::new().await,
-            play_song: load_sound_from_bytes( include_bytes!("..\\assets\\medium_boss.wav") ).await.unwrap(),
-            menu_song: load_sound_from_bytes( include_bytes!("..\\assets\\little_slime.wav") ).await.unwrap(),
+        let font = font.unwrap();
+        log("Loaded font");
+        let textures = Textures::new().await;
+        log("Loaded textures");
+        let play_song = load_sound_from_bytes( include_bytes!("..\\assets\\medium_boss.wav") ).await.unwrap();
+        log("Loaded play_song");
+        let menu_song = load_sound_from_bytes( include_bytes!("..\\assets\\little_slime.wav") ).await.unwrap();
+        log("Loaded menu_song");
+
+        return Assets { 
+            font_monogram: font,
+            t: textures,
+            play_song, menu_song,
             menu_switch: load_sound_from_bytes( include_bytes!("..\\assets\\menu.wav") ).await.unwrap(),
             shoot: load_sound_from_bytes( include_bytes!("..\\assets\\shoot.wav") ).await.unwrap(),
             hit: load_sound_from_bytes( include_bytes!("..\\assets\\hit.wav") ).await.unwrap(),
             dead: load_sound_from_bytes( include_bytes!("..\\assets\\dead.wav") ).await.unwrap(),
-        }
+        };
     }
 }

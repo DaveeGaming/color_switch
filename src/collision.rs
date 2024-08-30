@@ -21,7 +21,7 @@ impl Game {
             
             if hit {
                 b.hit = hit;
-                enemy.health -= self.player.damage;
+                enemy.health -= self.player.stats.bullet_damage;
             }
         }
         self.enemies = enemies;
@@ -42,9 +42,9 @@ impl Game {
         if hit {
             b.hit = hit;
             if b.state == self.color_state {
-                self.player.health = min(self.player.max_health, self.player.health + self.player.heal_from_b)
+                self.player.stats.current_health = min(self.player.stats.max_health, self.player.stats.current_health + self.player.stats.heal_from_bullets)
             } else {
-                self.player.health -= b.damage;
+                self.player.stats.current_health -= b.damage;
                 play_sound(&self.assets.hit, PlaySoundParams { looped: false, volume: self.effect_level as f32 / 10.0 });
             }
         }
@@ -60,15 +60,15 @@ impl Game {
         if hit && e.can_collide {
             if e.kind == EnemyType::FollowEnemy {
                 if e.state == self.color_state {
-                self.player.health = min(self.player.max_health, self.player.health + self.player.heal_from_b)
+                self.player.stats.current_health = min(self.player.stats.max_health, self.player.stats.current_health + self.player.stats.heal_from_bullets)
                 } else {
-                    self.player.health -= 1;
+                    self.player.stats.current_health -= 1;
                 }
             } else {
-                self.player.health -= e.contact_damage;
+                self.player.stats.current_health -= e.contact_damage;
                 play_sound(&self.assets.hit, PlaySoundParams { looped: false, volume: self.effect_level as f32 / 10.0 });
             }
-            e.health = 0.0;
+            e.health = 0;
         }
     }
 }

@@ -7,6 +7,7 @@ use rand::gen_range;
 
 use crate::characters::Character;
 use crate::characters::CharacterKind;
+use crate::log;
 use crate::particle::Particle;
 use crate::upgrade::*;
 use crate::{assets::Assets, bullet::*, colors::ColorPalette, enemy::*};
@@ -92,6 +93,7 @@ pub struct Game {
     pub upgrades: Vec<UpgradeEntity>, 
     pub player: Player,
     pub wave: Wave,
+    pub mouse_pos: Vec2,
     pub upgrade_count: f32,
     pub selected_char: i32,
     pub debug: DebugStuff,
@@ -108,15 +110,20 @@ pub struct Game {
     pub collection_x: i32,
     pub shooting_sound: bool,
     pub menu_song_started: bool,
-    pub switch_effect_t: f32,
+    pub switch_effect_t: Option<f32>,
     pub switch_effect_total: f32,
 }
 
 impl Game {
     pub async fn default() -> Self {
+        log(&"Starting to load assets");
+        let assets = Assets::default().await;
+        log(&"Finished loading assets");
+        log(&"Loading rest of game state");
         let mut g = Game {
             color_state: ColorState::Primary,
-            assets: Assets::default().await,
+            assets: assets,
+            mouse_pos: Vec2::ZERO,
             should_save: false,
             palette: ColorPalette::default(),
             curr_palette_idx: 0,
@@ -153,8 +160,8 @@ impl Game {
 
             upgrade_count: 3.0,
 
-            switch_effect_t: 0.0,
-            switch_effect_total: 0.01,
+            switch_effect_t: None,
+            switch_effect_total: 0.1,
 
             wave: Wave::default(),
 
@@ -201,16 +208,16 @@ impl Game {
             ],
 
             enemy_list: [
-                Enemy { health: 5.0, x: 50.0, y: 50.0, size: 40.0, score: 15 , kind: EnemyType::FollowShootEnemy, attack_speed: 1.0, can_collide: true, ..Default::default()},
-                Enemy { health: 10.0, x: 50.0, y: 50.0, size: 40.0, score: 30, kind: EnemyType::StaticCircleAttack, can_collide: true, contact_damage: 3, attack_t: 5.0, attack_speed: 5.0, ..Default::default()},
-                Enemy { state: ColorState::Primary,health: 2.0, x: 50.0, y: 50.0, size: 20.0, score: 5, kind: EnemyType::FollowEnemy, can_collide: true, ..Default::default()},
-                Enemy { state: ColorState::Secondary,health: 2.0, x: 50.0, y: 50.0, size: 20.0, score: 5, kind: EnemyType::FollowEnemy, can_collide: true, ..Default::default()},
-                Enemy { state: ColorState::Secondary,health: 2.0, x: 50.0, y: 50.0, size: 20.0, score: 5, kind: EnemyType::FollowEnemy, can_collide: true, ..Default::default()},
-                Enemy { state: ColorState::Secondary,health: 2.0, x: 50.0, y: 50.0, size: 20.0, score: 5, kind: EnemyType::FollowEnemy, can_collide: true, ..Default::default()},
-                Enemy { state: ColorState::Secondary,health: 2.0, x: 50.0, y: 50.0, size: 20.0, score: 5, kind: EnemyType::FollowEnemy, can_collide: true, ..Default::default()},
-                Enemy { state: ColorState::Secondary,health: 2.0, x: 50.0, y: 50.0, size: 20.0, score: 5, kind: EnemyType::FollowEnemy, can_collide: true, ..Default::default()},
-                Enemy { state: ColorState::Secondary,health: 2.0, x: 50.0, y: 50.0, size: 20.0, score: 5, kind: EnemyType::FollowEnemy, can_collide: true, ..Default::default()},
-                Enemy { state: ColorState::Secondary,health: 2.0, x: 50.0, y: 50.0, size: 20.0, score: 5, kind: EnemyType::FollowEnemy, can_collide: true, ..Default::default()},
+                Enemy { health: 5, x: 50.0, y: 50.0, size: 40.0, score: 15 , kind: EnemyType::FollowShootEnemy, attack_speed: 1.0, can_collide: true, ..Default::default()},
+                Enemy { health: 10, x: 50.0, y: 50.0, size: 40.0, score: 30, kind: EnemyType::StaticCircleAttack, can_collide: true, contact_damage: 3, attack_t: 5.0, attack_speed: 5.0, ..Default::default()},
+                Enemy { state: ColorState::Primary,health: 2, x: 50.0, y: 50.0, size: 20.0, score: 5, kind: EnemyType::FollowEnemy, can_collide: true, ..Default::default()},
+                Enemy { state: ColorState::Secondary,health: 2, x: 50.0, y: 50.0, size: 20.0, score: 5, kind: EnemyType::FollowEnemy, can_collide: true, ..Default::default()},
+                Enemy { state: ColorState::Secondary,health: 2, x: 50.0, y: 50.0, size: 20.0, score: 5, kind: EnemyType::FollowEnemy, can_collide: true, ..Default::default()},
+                Enemy { state: ColorState::Secondary,health: 2, x: 50.0, y: 50.0, size: 20.0, score: 5, kind: EnemyType::FollowEnemy, can_collide: true, ..Default::default()},
+                Enemy { state: ColorState::Secondary,health: 2, x: 50.0, y: 50.0, size: 20.0, score: 5, kind: EnemyType::FollowEnemy, can_collide: true, ..Default::default()},
+                Enemy { state: ColorState::Secondary,health: 2, x: 50.0, y: 50.0, size: 20.0, score: 5, kind: EnemyType::FollowEnemy, can_collide: true, ..Default::default()},
+                Enemy { state: ColorState::Secondary,health: 2, x: 50.0, y: 50.0, size: 20.0, score: 5, kind: EnemyType::FollowEnemy, can_collide: true, ..Default::default()},
+                Enemy { state: ColorState::Secondary,health: 2, x: 50.0, y: 50.0, size: 20.0, score: 5, kind: EnemyType::FollowEnemy, can_collide: true, ..Default::default()},
             ]
         };
         g.characters = vec![
@@ -295,7 +302,6 @@ impl Game {
     }
 
     pub fn draw(&mut self) {
-        self.particle_draw();
         match self.game_state {
             GameState::MainMenu => self.menu_draw(),
             GameState::Playing => self.game_draw(),
@@ -330,15 +336,16 @@ impl Game {
 
     pub fn update_spawning(&mut self, s: &mut SpawnEnemy) {
         s.spawn_t -= get_frame_time();
+        let size = 200.0;
 
         if s.spawn_t <= 0.0 {
-            //TODO: Randomly spawn here
 
-            let to_spawn = min(5, self.wave.enemy_remaining);
+            let spawn_count = gen_range(2, 3);
+            let to_spawn = min(spawn_count, self.wave.enemy_remaining_spawn);
 
             for _ in 0..to_spawn {
-                let x = rand::gen_range(0.0, 300.0);
-                let y = rand::gen_range(0.0, 300.0);
+                let x = rand::gen_range(0.0, size);
+                let y = rand::gen_range(0.0, size);
                 let kind = rand::gen_range(0, self.enemy_list.len() - 1);
 
                 
@@ -346,8 +353,8 @@ impl Game {
                 enemy.x = x + s.x;
                 enemy.y = y + s.y;
                 self.enemies.push( enemy );
-
-                self.wave.enemy_remaining -= 1;
+                self.particle_spawn(enemy.x + enemy.size/2.0, enemy.y + enemy.size/2.0);
+                self.wave.enemy_remaining_spawn -= 1;
             }
         }
     }
@@ -360,16 +367,21 @@ impl Game {
 
         let spawn_time = 2.0;
         let third = spawn_time / 3.0;
+        let size = 200.0;
         color.a = 0.5;
 
+        if s.spawn_t > 2.0 {
+            return;
+        }
+
         if s.spawn_t > 1.5 {
-            draw_texture(&self.assets.t.enemy_spawn1, s.x, s.y, color);
+            draw_texture_sized(&self.assets.t.enemy_spawn1, s.x, s.y, color, size, 0.0);
         } else if s.spawn_t > 1.0 {
-            draw_texture(&self.assets.t.enemy_spawn2, s.x, s.y, color);
+            draw_texture_sized(&self.assets.t.enemy_spawn2, s.x, s.y, color, size, 0.0);
         } else if s.spawn_t > 0.5 {
-            draw_texture(&self.assets.t.enemy_spawn3, s.x, s.y, color);
+            draw_texture_sized(&self.assets.t.enemy_spawn3, s.x, s.y, color, size, 0.0);
         } else {
-            draw_texture(&self.assets.t.enemy_spawn4, s.x, s.y, color);
+            draw_texture_sized(&self.assets.t.enemy_spawn4, s.x, s.y, color, size, 0.0);
         }
 
     }
@@ -381,6 +393,8 @@ impl Game {
     //     self.player.x = DESIGN_WIDTH/2.0 - self.player.size/2.0;
     //     self.player.y = 600.0;
     // }
+
+
 
     pub fn move_player(&mut self) {
         self.bullets = Vec::new();
@@ -407,7 +421,7 @@ impl Game {
             self.should_save = true;
         }
 
-        if self.player.health <= 0 || is_key_pressed(KeyCode::Escape) {
+        if self.player.stats.current_health <= 0 || is_key_pressed(KeyCode::Escape) {
             if self.current_score > self.high_score {
                 self.high_score = self.current_score;
                 self.should_save = true;
@@ -472,11 +486,13 @@ impl Game {
             
             self.enemy_collision(e);
             
-            if e.health <= 0.0 {
+            if e.health <= 0 {
                 self.current_score += e.score;   
+                self.particle_death(e.x + e.size/2.0, e.y + e.size/2.0);
+                self.wave.enemy_remaining_kill -= 1;
                 play_sound(&self.assets.dead, PlaySoundParams { looped: false, volume: self.effect_level as f32 / 10.0 })
             }
-            e.health > 0.0
+            e.health > 0
         });
         self.enemies = enemies;
         
@@ -503,7 +519,7 @@ impl Game {
                     if self.color_state != c.color {
                         c.hit = true;
                         play_sound(&self.assets.hit, PlaySoundParams { looped: false, volume: self.effect_level as f32 / 10.0 });
-                        self.player.health -= 2;
+                        self.player.stats.current_health -= 2;
                     } 
                 }
             }
@@ -531,29 +547,28 @@ impl Game {
             self.palette = self.palettes[ rand::gen_range(0, self.palettes.len()) ]
         }
 
-        if !(self.wave.state == WaveState::Start && self.wave.current > 0) && is_key_pressed(KeyCode::Space){
-            if self.wave.current == 0 {
-                self.switch_effect_total = 0.3;
-            }
-            // cool circle effect
-            self.switch_effect_t = self.switch_effect_total;
-        }
         
         if is_key_pressed(KeyCode::B) {
             self.enemies.push( 
                 self.enemy_list[1]
             );
         }
-
         
-        if self.switch_effect_t >= 0.0 {
-            self.switch_effect_t -= get_frame_time();
+        
+        if !(self.wave.state == WaveState::Start && self.wave.current > 0) && is_key_pressed(KeyCode::Space){
+            self.switch_effect_t = Some(0.0);
         }
-        if self.switch_effect_t <= 0.0 && self.switch_effect_t > -1.0 {
-            self.color_state = self.color_state.next();
-            self.switch_effect_t = -2.0;
-            self.switch_effect_total = 0.0;
-        }
+        self.switch_effect_t = match self.switch_effect_t {
+            Some(t) => {
+                if t < self.switch_effect_total {
+                    Some(t + get_frame_time())
+                } else {
+                    self.color_state = self.color_state.next();
+                    None
+                }
+            },
+            _ => None,
+        };
 
         match self.wave.state {
             WaveState::Start => {
@@ -571,14 +586,11 @@ impl Game {
                 }
             },
             WaveState::Spawning => {
-                if self.switch_effect_t > 0.0 {
-                    return;
-                }
-
                 // Wave started, everyting got defeated
                 if !self.wave.enemies_set {
                     let enemies_to_spawn = 20 + self.wave.current * 3;
-                    self.wave.enemy_remaining = enemies_to_spawn;
+                    self.wave.enemy_remaining_spawn = enemies_to_spawn;
+                    self.wave.enemy_remaining_kill = enemies_to_spawn;
                     self.wave.spawn_delay_tmax = 5.0 - self.wave.current as f32 * 0.05;
                     self.wave.enemies_set = true;
                 }
@@ -588,25 +600,34 @@ impl Game {
                     self.wave.spawn_delay_t = 0.0;
                 }
 
+                // Spawn smaller, more zones
                 if self.wave.spawn_delay_t <= 0.0 {
-                    if self.wave.enemies_set && self.wave.enemy_remaining > 0 {
-                        let rad_x = rand::gen_range(50.0, DESIGN_WIDTH - 400.0);
-                        let rad_y = rand::gen_range(50.0,  DESIGN_HEIGHT - 350.0);
-                        
-                        self.enemy_spawn.push(
-                            SpawnEnemy {
-                                x: rad_x, y: rad_y,
-                                spawn_t: 2.0,
-                            }
-                        );
-                        
+                    if self.wave.enemies_set && self.wave.enemy_remaining_spawn > 0 {
+
+                        let spawn_count = gen_range(2, 3);
+                        let spawn_area_width = DESIGN_WIDTH / spawn_count as f32;
+
+                        for i in 0..spawn_count {
+                            let rad_x = rand::gen_range(spawn_area_width * i as f32, spawn_area_width - 200.0);
+                            let rad_y = rand::gen_range(0.0, DESIGN_HEIGHT - 200.0);
+
+
+                            self.enemy_spawn.push(
+                                SpawnEnemy {
+                                    x: rad_x, y: rad_y,
+                                    spawn_t: 2.0 + gen_range(0.0, 0.5),
+                                }
+                            );
+                        }
+
                         self.wave.spawn_delay_t = self.wave.spawn_delay_tmax;
                     }
+
                 }
 
 
 
-                if self.wave.enemy_remaining == 0 && self.enemy_spawn.len() == 0 && self.enemies.len() == 0 {
+                if self.wave.enemy_remaining_spawn == 0 && self.enemy_spawn.len() == 0 && self.enemies.len() == 0 {
                     self.wave.state = WaveState::Start;
                     self.wave.current += 1;
                     self.wave.upgrade_picked = false;
@@ -619,36 +640,57 @@ impl Game {
     }
 
 
-    pub fn game_draw(&mut self) {
-
-
-        let color = match self.color_state {
+    pub fn get_primary_color(&self) -> Color {
+        let mut color = match self.color_state {
             ColorState::Primary => self.palette.fg_primary,
             ColorState::Secondary => self.palette.fg_secondary
         };
-
-        let bg_color = match self.color_state {
-            ColorState::Primary =>  self.palette.bg_primary,
-            ColorState::Secondary => self.palette.bg_secondary
+        
+        let color_invert = match self.color_state {
+            ColorState::Secondary => self.palette.fg_primary,
+            ColorState::Primary => self.palette.fg_secondary
         };
 
-        let bg_color_invert = match self.color_state {
-            ColorState::Secondary =>  self.palette.bg_primary,
+        if self.switch_effect_t.is_some() {
+            let color_ratio = (self.switch_effect_t.unwrap() / self.switch_effect_total);
+            color = lerp_color(color, color_invert, color_ratio);
+        }
+
+        color
+    }
+
+    pub fn get_primary_bg_color(&self) -> Color {
+        let mut color = match self.color_state {
+            ColorState::Primary => self.palette.bg_primary,
+            ColorState::Secondary => self.palette.bg_secondary
+        };
+        
+        let color_invert = match self.color_state {
+            ColorState::Secondary => self.palette.bg_primary,
             ColorState::Primary => self.palette.bg_secondary
         };
 
+        if self.switch_effect_t.is_some() {
+            let color_ratio = (self.switch_effect_t.unwrap() / self.switch_effect_total);
+            color = lerp_color(color, color_invert, color_ratio);
+        }
+
+        color
+    }
+    pub fn game_draw(&mut self) {
+        let color = self.get_primary_color();
+        let bg_color = self.get_primary_bg_color();
 
         clear_background(bg_color);
+        if self.wave.state == WaveState::Spawning {
+            let mut color = color.clone();
+            color.a = 0.08;
+            draw_text_centered_c(&self.wave.enemy_remaining_kill.to_string(), DESIGN_WIDTH/2.0, 150.0, 260.0, &self.assets.font_monogram, color);
+        }
+
 
         if self.wave.current == 0 {
             draw_texture(&self.assets.t.controls_finish, 0.0, 0.0, color);
-        }
-
-        // draw switch effect before everything else
-        if self.switch_effect_t > 0.0 {
-            draw_circle(self.player.x, self.player.y, 
-                2000.0 * (self.switch_effect_total - self.switch_effect_t) / self.switch_effect_total,
-                bg_color_invert);
         }
 
         let mut enemies = std::mem::take(&mut self.enemies);
@@ -683,6 +725,7 @@ impl Game {
         }
         self.enemy_spawn = spawners;
 
+        self.particle_draw();
         self.draw_upgrades();
         self.player_draw();
         
@@ -754,4 +797,24 @@ pub fn increment_or_zero(num: i32, max: i32) -> i32 {
 
 pub fn draw_texture_sized(texture: &Texture2D, x: f32, y: f32, color: Color, size: f32, rot: f32) {
     draw_texture_ex(texture, x, y, color, DrawTextureParams { dest_size: Some( Vec2 { x: size, y: size}), rotation: rot, ..Default::default()});
+}
+
+pub fn lerp(start: f32, end: f32, progress: f32) -> f32 {
+    start + (end - start) * progress
+}
+
+pub fn lerp_color(start: Color, end: Color, progress: f32) -> Color {
+    let diff = Color { 
+        r: end.r - start.r, 
+        g: end.g - start.g, 
+        b: end.b - start.b, 
+        a: 1.0
+    };
+
+    Color {
+        r: start.r + diff.r * progress,
+        g: start.g + diff.g * progress,
+        b: start.b + diff.b * progress,
+        a: 1.0,
+    }
 }

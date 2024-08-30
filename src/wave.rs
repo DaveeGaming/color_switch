@@ -9,7 +9,8 @@ pub enum WaveState {
 pub struct Wave {
     pub current: i32,
     pub state: WaveState,
-    pub enemy_remaining: i32,
+    pub enemy_remaining_spawn: i32,
+    pub enemy_remaining_kill: i32,
     pub upgrade_picked: bool,
     pub enemies_set: bool,
 
@@ -31,7 +32,8 @@ impl Wave {
         Wave { 
             current: 0, 
             state: WaveState::Start, 
-            enemy_remaining: 0, 
+            enemy_remaining_spawn: 0, 
+            enemy_remaining_kill: 0,
             enemies_set: false,
             start_spawned: false, 
             spawn_delay_tmax: 5.0,
