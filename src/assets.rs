@@ -52,28 +52,20 @@ impl Textures {
 
 impl Assets {
     pub async fn default() -> Self {
-        let font = load_ttf_font_from_bytes( include_bytes!("..\\assets\\FatPixelFont.ttf") );
+        let font = load_ttf_font_from_bytes( include_bytes!("../assets/FatPixelFont.ttf") );
         if font.is_err() {
             error!("Unable to load monogram font!")
         }
 
-        let font = font.unwrap();
-        log("Loaded font");
-        let textures = Textures::new().await;
-        log("Loaded textures");
-        let play_song = load_sound_from_bytes( include_bytes!("..\\assets\\medium_boss.wav") ).await.unwrap();
-        log("Loaded play_song");
-        let menu_song = load_sound_from_bytes( include_bytes!("..\\assets\\little_slime.wav") ).await.unwrap();
-        log("Loaded menu_song");
-
-        return Assets { 
-            font_monogram: font,
-            t: textures,
-            play_song, menu_song,
-            menu_switch: load_sound_from_bytes( include_bytes!("..\\assets\\menu.wav") ).await.unwrap(),
-            shoot: load_sound_from_bytes( include_bytes!("..\\assets\\shoot.wav") ).await.unwrap(),
-            hit: load_sound_from_bytes( include_bytes!("..\\assets\\hit.wav") ).await.unwrap(),
-            dead: load_sound_from_bytes( include_bytes!("..\\assets\\dead.wav") ).await.unwrap(),
-        };
+        return Assets {
+            font_monogram: font.unwrap(),
+            t: Textures::new().await,
+            play_song: load_sound_from_bytes( include_bytes!("../assets/medium_boss.wav") ).await.unwrap(),
+            menu_song: load_sound_from_bytes( include_bytes!("../assets/little_slime.wav") ).await.unwrap(),
+            menu_switch: load_sound_from_bytes( include_bytes!("../assets/menu.wav") ).await.unwrap(),
+            shoot: load_sound_from_bytes( include_bytes!("../assets/shoot.wav") ).await.unwrap(),
+            hit: load_sound_from_bytes( include_bytes!("../assets/hit.wav") ).await.unwrap(),
+            dead: load_sound_from_bytes( include_bytes!("../assets/dead.wav") ).await.unwrap(),
+        }
     }
 }
